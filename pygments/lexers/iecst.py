@@ -78,6 +78,7 @@ class IecStLexer(RegexLexer):
                         "ADR",
                         "ADRINST",
                         "ASIN",
+                        "AT",
                         "ATAN",
                         "BITADR",
                         "BREAK",
@@ -138,6 +139,7 @@ class IecStLexer(RegexLexer):
                         "TRUNC",
                         "UNTIL",
                         "VAR",
+                        "VAR_EXTERNAL",
                         "VAR_GLOBAL",
                         "VAR_INPUT",
                         "VAR_IN_OUT",
@@ -240,14 +242,9 @@ class IecStLexer(RegexLexer):
                 Literal.DateTime,
             ),
             include("types"),
+            # Direct addressing: %IX0.0, %QX0.0, %MW100, etc.
+            (r"%[IQM][XBWDL]?[0-9]+(\.[0-9]+)*", Name.Label),
             (r"'", String.Single, "string"),
-            # (r'([LuU]|u8)?(")', bygroups(String.Affix, String), "string"),
-            # (
-            #     r"([LuU]|u8)?(')(\\.|\\[0-7]{1,3}|\\x[a-fA-F0-9]{1,2}|"
-            #     r"[^\\\'\n])(')",
-            #     bygroups(String.Affix, String.Char, String.Char,
-            #              String.Char),
-            # ),
             (r"16#[0-9A-F](_?[0-9A-F])*", Number.Hex),
             (r"8#[0-7](_?[0-7])*", Number.Oct),
             (r"2#[01](_?[01])*", Number.Bin),
@@ -311,17 +308,6 @@ class IecStLexer(RegexLexer):
             (_ident, Name),
         ],
         "string": [("[^'\n]+", String), ("'", String.Single, "#pop")],
-        # "string": [
-        #     (r'"', String, "#pop"),
-        #     (
-        #         r'\\([\\abfnrtv"\']|x[a-fA-F0-9]{2,4}|'
-        #         r"u[a-fA-F0-9]{4}|U[a-fA-F0-9]{8}|[0-7]{1,3})",
-        #         String.Escape,
-        #     ),
-        #     (r'[^\\"\n]+', String),  # all other characters
-        #     (r"\\\n", String),  # line continuation
-        #     (r"\\", String),  # stray backslash
-        # ],
         "root": [
             include("whitespace"),
             include("keywords"),

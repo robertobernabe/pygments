@@ -1,6 +1,6 @@
 import re
 
-from pygments.lexer import RegexLexer, ProfilingRegexLexer,bygroups, default, include, this, using, words
+from pygments.lexer import RegexLexer, default, include, words
 from pygments.token import (
     Comment,
     Keyword,
@@ -14,13 +14,17 @@ from pygments.token import (
     Literal,
 )
 
-__all__ = ["IecstLexer"]
+__all__ = ["IecStLexer"]
 
 
-class IecstLexer(RegexLexer):
+class IecStLexer(RegexLexer):
     """
     For `IEC 61131-3 Structured Text
     <https://en.wikipedia.org/wiki/Structured_text>`_ source code.
+
+    This lexer covers the Structured Text (ST) language, including support
+    for common data types, control structures, and IEC-specific literals
+    like time (T#) and base-prefixed numbers (16#, 2#).
 
     .. versionadded:: TODO
     """
@@ -284,11 +288,7 @@ class IecstLexer(RegexLexer):
             (r"([\w]+)(\()", Name.Function),
             (_ident, Name),
         ],
-
-        "string": [
-            ("[^'\n]+", String),
-            ("'", String.Single, "#pop")
-        ],
+        "string": [("[^'\n]+", String), ("'", String.Single, "#pop")],
         # "string": [
         #     (r'"', String, "#pop"),
         #     (

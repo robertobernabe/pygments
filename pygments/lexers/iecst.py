@@ -26,13 +26,16 @@ class IecStLexer(RegexLexer):
     for common data types, control structures, and IEC-specific literals
     like time (T#) and base-prefixed numbers (16#, 2#).
 
-    .. versionadded:: TODO
+    .. versionadded:: 2.20
     """
 
     name = "IEC Structured Text"
-    aliases = ["iecst", "st"]
+    aliases = ["iecst", "structured-text", "structuredtext"]
     filenames = ["*.st"]
     mimetypes = ["text/x-iecst"]
+    url = "https://en.wikipedia.org/wiki/Structured_text"
+    version = "3.0"
+    version_added = "2.20"
 
     flags = re.IGNORECASE
 

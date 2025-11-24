@@ -40,7 +40,9 @@ class IecStLexer(RegexLexer):
     flags = re.IGNORECASE
 
     _duration_keywords = ("TIME", "T")
-    _date_time_keywords = ("DATE", "TIME_OF_DAY", "DATE_AND_TIME", "D", "TOD", "DT")
+    _date_time_keywords = (
+        "DATE", "TIME_OF_DAY", "DATE_AND_TIME", "D", "TOD", "DT"
+    )
     # Hexadecimal part in an hexadecimal integer/floating-point literal.
     # This includes decimal separators matching.
     _hexpart = r"[0-9a-fA-F](\'?[0-9a-fA-F])*"
@@ -52,7 +54,9 @@ class IecStLexer(RegexLexer):
 
     # Identifier regex with C and C++ Universal Character Name (UCN) support.
     _ident = r"(?!\d)(?:[\w$]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8})+"
-    _namespaced_ident = r"(?!\d)(?:[\w$]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|::)+"
+    _namespaced_ident = (
+        r"(?!\d)(?:[\w$]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|::)+"
+    )
 
     tokens = {
         "whitespace": [
@@ -62,7 +66,7 @@ class IecStLexer(RegexLexer):
             (r"\\\n", Text),  # line continuation
             (r"\(\*", Comment.Multiline, "comment"),
             (r"\/\*", Comment.Multiline, "comment"),
-            (r"//.*?$", Comment.Singleline),
+            (r"//[^\n]*", Comment.Singleline),
         ],
         "keywords": [
             (
@@ -130,6 +134,7 @@ class IecStLexer(RegexLexer):
                         "SUB",
                         "TAN",
                         "THEN",
+                        "TO",
                         "TRUNC",
                         "UNTIL",
                         "VAR",
@@ -145,7 +150,7 @@ class IecStLexer(RegexLexer):
                 Keyword,
             ),
             (
-                words(("TASK", "WITH", "USING", "USES", "FROM", "UNTIL"), suffix=r"\b"),
+                words(("TASK", "WITH", "USING", "USES", "FROM"), suffix=r"\b"),
                 Keyword,
             ),
             (
@@ -213,16 +218,39 @@ class IecStLexer(RegexLexer):
         ],
         "statements": [
             include("keywords"),
+            # Duration and date/time literals must come before types
+            # because T, D, DT, etc. are also type keywords
+            (
+                r"(?i)(T|TIME)#\-?\s*"
+                r"(?:(?:[0-9]+\.?[0-9]*)(?:d|h|ms|m|s|us|ns)_?)+",
+                Literal.Duration,
+            ),
+            (
+                r"(?i)(TOD|TIME_OF_DAY)#[0-9]{2}:[0-9]{2}:[0-9]{2}"
+                r"(?:\.[0-9]{1,3})?",
+                Literal.TimeOfDay,
+            ),
+            (
+                r"(?i)(DT|DATE_AND_TIME)#[0-9]{4}-[0-9]{2}-[0-9]{2}-"
+                r"[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,3})?",
+                Literal.DateTime,
+            ),
+            (
+                r"(?i)(D|DATE)#[0-9]{4}-[0-9]{2}-[0-9]{2}",
+                Literal.DateTime,
+            ),
             include("types"),
             (r"'", String.Single, "string"),
             # (r'([LuU]|u8)?(")', bygroups(String.Affix, String), "string"),
             # (
-            #     r"([LuU]|u8)?(')(\\.|\\[0-7]{1,3}|\\x[a-fA-F0-9]{1,2}|[^\\\'\n])(')",
-            #     bygroups(String.Affix, String.Char, String.Char, String.Char),
+            #     r"([LuU]|u8)?(')(\\.|\\[0-7]{1,3}|\\x[a-fA-F0-9]{1,2}|"
+            #     r"[^\\\'\n])(')",
+            #     bygroups(String.Affix, String.Char, String.Char,
+            #              String.Char),
             # ),
-            (r"16#[0-9A-F]+", Number.Hex),
-            (r"8#[0-9]+", Number.Oct),
-            (r"2#[0-9]+", Number.Bin),
+            (r"16#[0-9A-F](_?[0-9A-F])*", Number.Hex),
+            (r"8#[0-7](_?[0-7])*", Number.Oct),
+            (r"2#[01](_?[01])*", Number.Bin),
             # Hexadecimal floating-point literals (C11, C++17)
             (
                 r"0[xX]("
@@ -267,17 +295,8 @@ class IecStLexer(RegexLexer):
             (r"(-)?0[xX]" + _hexpart + _intsuffix, Number.Hex),
             (r"(-)?0[bB][01](\'?[01])*" + _intsuffix, Number.Bin),
             (r"(-)?0(\'?[0-7])+" + _intsuffix, Number.Oct),
-            (r"(-)?" + _decpart + _intsuffix, Number.Integer),
-            (r":=|:|\+|-|\*|/|>|<", Operator),
-            (
-                r"(?i)(#\-?\s*(?:(?:[0-9]\.?){1,}(?:d|h|ms|m|s)_?){1,})",
-                Literal.Duration,
-            ),
-            (r"(?i)#\s*[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,3})?", Literal.TimeOfDay),
-            (
-                r"(?i)#\s*[0-9]{4}-[0-9]{2}-[0-9]{2}(?:-[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,3})?)?",
-                Literal.DateTime,
-            ),
+            (r"(-)?"+_decpart+_intsuffix, Number.Integer),
+            (r":=|=>|:|\+|-|\*|/|>=|<=|<>|>|<|&|\|", Operator),
             (
                 r"""(?x)\b(?:
                 AND|OR|NOT|
@@ -316,13 +335,11 @@ class IecStLexer(RegexLexer):
             (r"[{;]", Punctuation, "#pop"),
         ],
         "comment": [
-            (r"[^*)]+", Comment.Multiline),
             (r"\(\*", Comment.Multiline, "#push"),
             (r"\*\)", Comment.Multiline, "#pop"),
-            (r"[*)]", Comment.Multiline),
-            (r"[^*/]+", Comment.Multiline),
             (r"\/\*", Comment.Multiline, "#push"),
             (r"\*\/", Comment.Multiline, "#pop"),
-            (r"[*/]", Comment.Multiline),
+            (r"[^(*/)]+", Comment.Multiline),
+            (r"[(*/)]", Comment.Multiline),
         ],
     }
